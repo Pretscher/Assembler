@@ -15,14 +15,14 @@ void Parser::advance() {
 }
 
 /**
- * @return int 0 if a-instruction, 1 if l-instruction, 2 c-instruction, 3 comment or white space
+ * @return int 0 if a-instruction, 1 if l-instruction, 2 c-instruction
  */
 int Parser::instructionType() const {
-    if (currentLine.empty() || Utility::isWhitespace(currentLine)) return 3;
-    switch (currentLine.at(0)) {
-    case('@'): return 0;
-    case('('): return 1;
-    case('/'): return 3;
+    if (currentLine.at(0) == '@') {
+        return 0;
+    } 
+    if (currentLine.at(0) == '(') {
+        return 1;//label
     }
     return 2;
 }

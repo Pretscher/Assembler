@@ -1,7 +1,31 @@
 #include "InstructionHandler.hpp"
 
+vector<string> InstructionHandler::translate() {
+    //first cycle: generate all labels. We have to know the lines numbers the labels point to for code generation.
+    generateLabels();
 
-string InstructionHandler::handleAInstruction() const {
+    //second cylce: code generation
+    vector<string> instructions;
+    while (parser.hasMoreLines()) {
+        int type = parser.instructionType();
+        string instruction;
+        if (type == 0) {//a-instruction
+            instruction = handleAInstruction();
+        }
+        //type 1, l-instructions, should be ignored here, they were handled in the first cycle
+        else if (type == 2) {//d-instruction
+            instruction = handleCInstruction();
+        }
+
+        if (instruction.empty() == false) {
+            instructions.push_back(instruction);
+        }
+        parser.advance();
+    }
+    return instructions;
+}
+
+string InstructionHandler::handleAInstruction() {
     if (parser.isSymbol()) {
         return handleSymbol();
     }
@@ -19,12 +43,16 @@ string InstructionHandler::handleCInstruction() const {
     return instruction;
 }
 
-
-string InstructionHandler::handleSymbol() const {
+string InstructionHandler::handleSymbol() {
     string line = parser.getLine();
+    //remove @
     line.erase(0, 1);
-    string s = symbols.at(line);
-    return symbols.at(line);
+    //if not already in symbol table, add it
+    if (symbols.find(line) == symbols.end()) {
+        symbols[line] = Utility::toBinary(++customSymbols);
+        symbols[line].insert(0, "0");
+    }
+    return symbols[line];
 }
 
 string InstructionHandler::getComp() const {
@@ -99,7 +127,7 @@ void InstructionHandler::initCompMap() {
     compMap["D|A"] = "010101";
 }
 
-void InstructionHandler::initSymbols() {
+void InstructionHandler::generateLabels() {
     for (int i = 0; i < 16; i++) {
         string r = "R";
         r.append(std::to_string(i));
@@ -132,22 +160,6 @@ void InstructionHandler::initSymbols() {
             int lineNumber = parser.getLineNumber() - labelCount++;
             symbols[line] = Utility::toBinary(lineNumber);
             symbols[line].insert(0, "0");
-        }
-        parser.advance();
-    }
-    parser.reset();
-    //needs to be done in a second loop, because we dont want to add label-calls to the map as symbols, so we need to know all labels
-    while (parser.hasMoreLines()) {
-        if (parser.instructionType() == 0 && Utility::isLetter(parser.getLine().at(1))) {
-            string line = parser.getLine();
-            //remove brackets
-            line.erase(0, 1);
-            //if a label, dont init a symbol
-            if (symbols.find(line) == symbols.end()) {
-                symbols[line] = Utility::toBinary(customSymbols);
-                symbols[line].insert(0, "0");
-                customSymbols++;
-            }
         }
         parser.advance();
     }
